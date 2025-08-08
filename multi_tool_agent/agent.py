@@ -2,6 +2,7 @@ import datetime
 from zoneinfo import ZoneInfo
 from google.adk.agents import Agent
 import requests 
+from timezonefinder import TimezoneFinder
 import os
 from dotenv import load_dotenv 
 
@@ -42,28 +43,40 @@ def get_weather(city: str) -> dict:
 
 
 def get_current_time(city: str) -> dict:
-    """Returns the current time in a specified city."""
-    print(f"[LOG] Fetching current time for: {city}")
+    """Get exact current time for a city using OpenWeatherMap's coordinates."""
+    print(f"[LOG] Fetching exact time for: {city}")
 
-    # Basic city-to-timezone mapping (could be replaced with geolocation API)
-    city_timezones = {
-        "new york": "America/New_York",
-        "london": "Europe/London",
-        "tokyo": "Asia/Tokyo",
-        "delhi": "Asia/Kolkata"
-    }
+    try:
+        # Step 1: Get coordinates from OpenWeatherMap
+        geo_url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={OPENWEATHER_API_KEY}"
+        geo_res = requests.get(geo_url)
+        geo_data = geo_res.json()
 
-    tz_identifier = city_timezones.get(city.lower())
-    if not tz_identifier:
-        return {
-            "status": "error",
-            "error_message": f"Sorry, I don't have timezone information for {city}."
-        }
+        if geo_res.status_code != 200 or "coord" not in geo_data:
+            return {
+                "status": "error",
+                "error_message": f"Could not find coordinates for '{city}'."
+            }
 
-    tz = ZoneInfo(tz_identifier)
-    now = datetime.datetime.now(tz)
-    report = f'The current time in {city} is {now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}'
-    return {"status": "success", "report": report}
+        lat = geo_data["coord"]["lat"]
+        lon = geo_data["coord"]["lon"]
+
+        tf = TimezoneFinder()
+        tz_name = tf.timezone_at(lat=lat, lng=lon)
+
+        if not tz_name:
+            return {
+                "status": "error",
+                "error_message": f"Could not determine timezone for '{city}'."
+            }
+
+        tz = ZoneInfo(tz_name)
+        now = datetime.datetime.now(tz)
+        report = f'The current time in {city} is {now.strftime("%Y-%m-%d %H:%M:%S %Z%z")}'
+        return {"status": "success", "report": report}
+
+    except Exception as e:
+        return {"status": "error", "error_message": str(e)}
 
 
 root_agent = Agent(
@@ -76,7 +89,7 @@ root_agent = Agent(
         "You are a helpful agent who can answer user questions about the time and weather in a city.\n"
         "If the user asks for the weather in a state, region, or country without giving a city, "
         "you MUST respond by asking: 'Which city in that state are you asking about?'.\n"
-        "Do not call the weather tool until the user provides a specific city name."
+        "Do not call the weather tool and current time tool until the user provides a specific city name."
     ),
     tools=[get_weather, get_current_time],
 )
