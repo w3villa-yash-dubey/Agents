@@ -89,7 +89,7 @@ root_agent = Agent(
         "You are a helpful agent who can answer user questions about the time and weather in a city.\n"
         "If the user asks for the weather in a state, region, or country without giving a city, "
         "you MUST respond by asking: 'Which city in that state are you asking about?'.\n"
-        "Do not call the weather tool until the user provides a specific city name."
+        "Do not call the weather tool and current time tool until the user provides a specific city name."
     ),
     tools=[get_weather, get_current_time],
 )
