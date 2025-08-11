@@ -10,6 +10,13 @@ load_dotenv()
 
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
+# Get directory of this file
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Load instructions from agent_instructions.txt in the same folder as agent.py
+with open(os.path.join(BASE_DIR, "agent_instructions.txt"), "r", encoding="utf-8") as f:
+    AGENT_INSTRUCTIONS = f.read()
+
 def get_weather(city: str) -> dict:
     """Retrieves the current weather report for a specified city using OpenWeatherMap."""
     print(f"[LOG] Fetching weather for: {city}")
@@ -85,12 +92,7 @@ root_agent = Agent(
     description=(
         "Agent to answer questions about the time and weather in a city."
     ),
-    instruction=(
-        "You are a helpful agent who can answer user questions about the time and weather in a city.\n"
-        "If the user asks for the weather in a state, region, or country without giving a city, "
-        "you MUST respond by asking: 'Which city in that state are you asking about?'.\n"
-        "Do not call the weather tool and current time tool until the user provides a specific city name."
-    ),
+    instruction=AGENT_INSTRUCTIONS,
     tools=[get_weather, get_current_time],
 )
 
